@@ -10,6 +10,9 @@ import java.nio.file.StandardOpenOption;
 import java.util.Collections;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import liqp.Template;
+import liqp.TemplateParser;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
@@ -346,7 +349,7 @@ public class EmbulkRunner {
         final String configString = configFilePath.toString();
         if (EXT_YAML_LIQUID.matcher(configFilePath.toString()).matches()) {
             return this.embed.newConfigLoader().fromYamlString(
-                    runLiquid(new String(Files.readAllBytes(configFilePath), StandardCharsets.UTF_8),
+                    parseYaml(new String(Files.readAllBytes(configFilePath), StandardCharsets.UTF_8),
                             templateParams,
                             (templateIncludePath == null
                                     ? configFilePath.toAbsolutePath().getParent().toString()
@@ -446,6 +449,17 @@ public class EmbulkRunner {
         final Object object = this.embed.dumpObjectFromResumeState(modelObject);
         final YamlProcessor yamlProc = YamlProcessor.create(false);
         return yamlProc.dump(object);
+    }
+
+    private String parseYaml(
+            final String templateSource,
+            final Map<String, Object> templateParams,
+            final String templateIncludePath) {
+        TemplateParser parser = new TemplateParser.Builder()
+                .withNameResolver(new EmbulkNameResolver(templateIncludePath))
+                .build();
+        Template template = parser.parse(templateSource);
+        return template.render(templateParams);
     }
 
     // class Runnable
